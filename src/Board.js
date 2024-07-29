@@ -21,6 +21,62 @@ export default class Board extends React.Component {
       complete: React.createRef(),
     }
   }
+
+  componentDidMount() {
+    this.setupDragula();
+  }
+
+  setupDragula() {
+    const containers = [
+      this.swimlanes.backlog.current,
+      this.swimlanes.inProgress.current,
+      this.swimlanes.complete.current
+    ];
+    Dragula(containers)
+      .on('drop', (el, target, source, sibling) => {
+        const id = el.getAttribute('data-id');
+        const newStatus = target.getAttribute('data-status');
+        this.updateClientStatus(id, newStatus);
+      });
+  }
+
+  updateClientStatus(id, newStatus) {
+    //console.log(`Updating client ${id} to ${newStatus}`);
+    this.setState(prevState => {
+      const validStatuses = ['backlog', 'in-progress', 'complete'];
+
+      if (!validStatuses.includes(newStatus)) {
+        console.error(`Invalid status: ${newStatus}`);
+        return prevState;
+      }
+
+      const newClients = {
+        backlog: [],
+        inProgress: [],
+        complete: []
+      };
+
+      let updatedClient = null;
+
+      
+      for (const [key, clients] of Object.entries(prevState.clients)) {
+        const clientIndex = clients.findIndex(client => client.id === id);
+        if (clientIndex !== -1) {
+          updatedClient = { ...clients[clientIndex], status: newStatus };
+          newClients[key] = clients.filter(client => client.id !== id);
+        } else {
+          newClients[key] = clients;
+        }
+      }
+
+      if (updatedClient) {
+        newClients[newStatus].push(updatedClient);
+      }
+
+      return { clients: newClients };
+    });
+  }
+
   getClients() {
     return [
       ['1','Stark, White and Abbott','Cloned Optimal Architecture', 'in-progress'],
